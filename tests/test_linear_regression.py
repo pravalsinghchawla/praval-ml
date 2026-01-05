@@ -3,7 +3,7 @@ import pytest
 from pravalml import LinearRegression
 
 def test_fit_returns_self():
-    X = np.array([[1], [2], [3], [4]])
+    X = np.array([1, 2, 3, 4])
     y = np.array([3, 6, 9, 12])
     
     model = LinearRegression()
@@ -12,7 +12,7 @@ def test_fit_returns_self():
     assert returned is model
 
 def test_linear_regression_normal_fit_predict():
-    X = np.array([[1], [2], [3], [4]])
+    X = np.array([1, 2, 3, 4])
     y = np.array([3, 6, 9, 12])
 
     model = LinearRegression(method="normal", epochs=10000)
@@ -108,4 +108,13 @@ def test_predict_before_fit_raises():
 
     with pytest.raises(Exception):
         model.predict(X)
+
+def test_invalid_X_and_y_matrices():
+    X = [1, 2, 3, 4, 5]
+    y = [2, 4, 6, 8]
+    
+    model = LinearRegression()
+
+    with pytest.raises(ValueError):
+        model.fit(X, y)
 
