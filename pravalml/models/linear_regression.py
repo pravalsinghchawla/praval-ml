@@ -13,11 +13,23 @@ class LinearRegression:
         self.lr = lr
         self.epochs = epochs
 
-        self.coef = None
-        self.intercept = None
-        self.loss_history = []
+        self._weights = None
+        self.coef_ = None
+        self.intercept_ = None
+        self.loss_history_ = []
 
+        
     def fit(self, X, y):
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y, dtype=float).reshape(-1)
+
+        if X.ndim != 2:
+            raise ValueError("X must be 2D (n_samples, n_features)")
+        if y.ndim != 1:
+            raise ValueError("y must be 1D (n_samples,)")
+        if y.shape[0] != X.shape[0]:
+            raise ValueError("X and y must have same number of samples")
+        
         if self.fit_intercept:
             X = self._add_intercept(X)
 
@@ -31,30 +43,36 @@ class LinearRegression:
         return self
     
     def predict(self, X):
+        if self._weights is None:
+            raise ValueError("Model is not fitted yet. Call fit() first")
+        
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2:
+            raise ValueError("X must be 2D (n_samples, n_features)")
+        
+        if self.fit_intercept:
+            X = self._add_intercept(X)
+        
         return X @ self._weights
 
         
     def _fit_normal(self, X, y):
-        XtX = X.T @ X
-
-        # Pseudoinverse for numerical stability
-        self._weights = np.linalg.pinv(XtX) @ X.T @ y
-
+        self._weights = np.linalg.pinv(X) @ y
         self._unpack_weights()
         
     def _fit_gd(self, X, y):
         n_samples, n_features = X.shape
-        self._weights = np.zeros(n_features)
+        self._weights = np.zeros(n_features, dtype=float)
+        self.loss_history_.clear()
         
         for _ in range(self.epochs):
             y_pred = X @ self._weights
-            error = y - y_pred
+            error = y_pred - y
 
             grad = (2 / n_samples) * (X.T @ error)
             self._weights -= self.lr * grad
 
-            loss = np.mean(error ** 2)
-            self.loss_history.append(loss)
+            self.loss_history_.append(np.mean(error ** 2))
 
         self._unpack_weights()
     
@@ -63,8 +81,8 @@ class LinearRegression:
     
     def _unpack_weights(self):
         if self.fit_intercept:
-            self.intercept_ = self._weights[0]
-            self.coef_ = self._weights[1:]
+            self.intercept_ = float(self._weights[0])
+            self.coef_ = self._weights[1:].copy()
         else:
             self.intercept_ = 0.0
-            self.coef_ = self._weights
+            self.coef_ = self._weights.copy()
