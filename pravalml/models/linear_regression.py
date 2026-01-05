@@ -1,6 +1,8 @@
 import numpy as np 
 
 from pravalml.base import BaseEstimator, RegressorMixin
+from pravalml.validation import check_X_y, check_X
+
 
 class LinearRegression(BaseEstimator, RegressorMixin):
     def __init__(
@@ -22,16 +24,8 @@ class LinearRegression(BaseEstimator, RegressorMixin):
 
         
     def fit(self, X, y):
-        X = np.asarray(X, dtype=float)
-        y = np.asarray(y, dtype=float).reshape(-1)
+        X, y = check_X_y(X, y, X_dtype=float, y_dtype=float)
 
-        if X.ndim != 2:
-            raise ValueError("X must be 2D (n_samples, n_features)")
-        if y.ndim != 1:
-            raise ValueError("y must be 1D (n_samples,)")
-        if y.shape[0] != X.shape[0]:
-            raise ValueError("X and y must have same number of samples")
-        
         if self.fit_intercept:
             X = self._add_intercept(X)
 
@@ -43,19 +37,19 @@ class LinearRegression(BaseEstimator, RegressorMixin):
             raise ValueError("method must be 'normal' or 'gd'")
 
         return self
+
     
     def predict(self, X):
         if self._weights is None:
             raise ValueError("Model is not fitted yet. Call fit() first")
-        
-        X = np.asarray(X, dtype=float)
-        if X.ndim != 2:
-            raise ValueError("X must be 2D (n_samples, n_features)")
-        
+
+        X = check_X(X, dtype=float, ensure_2d=True)
+
         if self.fit_intercept:
             X = self._add_intercept(X)
-        
+
         return X @ self._weights
+
 
         
     def _fit_normal(self, X, y):
@@ -65,7 +59,7 @@ class LinearRegression(BaseEstimator, RegressorMixin):
     def _fit_gd(self, X, y):
         n_samples, n_features = X.shape
         self._weights = np.zeros(n_features, dtype=float)
-        self.loss_history_.clear()
+        self.loss_history_ = []
         
         for _ in range(self.epochs):
             y_pred = X @ self._weights
