@@ -80,9 +80,12 @@ class LinearRegression:
         return np.c_[np.ones(X.shape[0]), X]
     
     def _unpack_weights(self):
+        if self._weights is None:
+            raise ValueError("Internal error: _weights is None.")
+        
         if self.fit_intercept:
             self.intercept_ = float(self._weights[0])
-            self.coef_ = self._weights[1:].copy()
+            self.coef_ = self._weights[1:].copy() 
         else:
             self.intercept_ = 0.0
             self.coef_ = self._weights.copy()
