@@ -12,7 +12,7 @@ class LassoRegression(LinearRegression):
             epochs: int = 1000
     ):    
         super().__init__(fit_intercept=fit_intercept,lr= lr,epochs= epochs, method="gd")
-        self.alpha = alpha
+        self.alpha = float(alpha)
 
     def fit(self, X, y):
         X, y = check_X_y(X, y, X_dtype=float, y_dtype=float)
