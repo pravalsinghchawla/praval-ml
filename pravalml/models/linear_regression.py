@@ -8,9 +8,9 @@ class LinearRegression(BaseEstimator, RegressorMixin):
     def __init__(
             self,
             fit_intercept: bool = True,
-            method: str = "normal", # "normal" or "gd"
             lr: float = 1e-2,
             epochs: int = 1000,
+            method: str = "normal" # "normal" or "gd"
     ):  
         self.fit_intercept = fit_intercept
         self.method = method
