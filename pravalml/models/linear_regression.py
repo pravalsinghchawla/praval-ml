@@ -1,6 +1,8 @@
 import numpy as np 
 
-class LinearRegression:
+from pravalml.base import BaseEstimator, RegressorMixin
+
+class LinearRegression(BaseEstimator, RegressorMixin):
     def __init__(
             self,
             fit_intercept: bool = True,
