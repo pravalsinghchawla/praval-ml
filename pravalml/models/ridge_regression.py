@@ -12,17 +12,8 @@ class RidgeRegression(LinearRegression):
             lr: float = 1e-2,
             epochs: int = 1000
     ):
-        
+        super().__init__(fit_intercept=fit_intercept, method=method, lr=lr, epochs=epochs)
         self.alpha = alpha
-        self.fit_intercept = fit_intercept
-        self.method = method
-        self.lr = lr
-        self.epochs = epochs
-
-        self._weights = None
-        self.coef_ = None
-        self.intercept_ = None
-        self.loss_history_ = []
     
     def fit(self, X, y):
         X, y = check_X_y(X, y, X_dtype=float, y_dtype=float)
@@ -72,20 +63,22 @@ class RidgeRegression(LinearRegression):
         
         self.loss_history_ = []
 
+        alpha_eff = self.alpha / n_samples
+
         for _ in range(self.epochs):
             y_pred = X @ self._weights
             residual = y_pred - y
 
             mse = (residual @ residual) / n_samples
 
-            penalty = self.alpha * np.sum((self._weights * reg_mask) ** 2)
+            penalty = alpha_eff * np.sum((self._weights * reg_mask) ** 2)
 
             loss = mse + penalty
             self.loss_history_.append(float(loss))
 
             grad = (2.0 / n_samples) * (X.T @ residual)
 
-            grad += 2.0 * self.alpha * (self._weights * reg_mask)
+            grad += 2.0 * alpha_eff * (self._weights * reg_mask)
 
             self._weights -= self.lr * grad
          
