@@ -17,6 +17,8 @@ class MLPBase(BaseEstimator, ABC):
             random_state = None,
             shuffle = True
     ):
+        if isinstance(hidden_layer_sizes, int):
+            hidden_layer_sizes = (hidden_layer_sizes,)
         self.hidden_layer_sizes = tuple(hidden_layer_sizes)
         self.activation = activation
         self.lr = lr
@@ -224,4 +226,103 @@ class MLPRegressor(MLPBase, RegressorMixin):
     def _predict_from_output(self, A_out):
         if A_out.shape[1] == 1:
             return A_out.ravel()
+        return A_out
+    
+
+class MLPClassifier(MLPBase, ClassifierMixin):
+    def __init__(
+            self, 
+            hidden_layer_sizes=(100, ), 
+            activation: str = "relu", 
+            lr: float = 0.001, 
+            epochs: int = 200, 
+            batch_size=None, 
+            l2: float = 0.0, 
+            fit_intercept: bool = True, 
+            random_state=None, 
+            shuffle=True,
+            threshold: float = 0.5
+    ):
+        super().__init__(
+            hidden_layer_sizes=hidden_layer_sizes,
+            activation=activation,
+            lr=lr,
+            epochs=epochs,
+            batch_size=batch_size,
+            l2=l2,
+            fit_intercept=fit_intercept,
+            random_state=random_state,
+            shuffle=shuffle,
+        )
+        self.threshold = threshold
+
+        self.classes_ = None
+
+    def _ensure_2d_targets(self, y):
+        y = np.asarray(y)
+
+        if y.ndim == 2 and y.shape[1] > 1:
+            self.classes_ = np.arange(y.shape[1])
+            return y.astype(float)
+
+        if y.ndim != 1:
+            y = y.ravel()
+        
+        self.classes_ = np.unique(y)
+
+        if self.classes_.size == 2:
+            y01 = (y == self.classes_[1]).astype(float).reshape(-1, 1)
+            return y01
+        
+        n = y.shape[0]
+        k = self.classes_.size
+        y_onehot = np.zeros((n, k), dtype=float)
+
+        class_to_index = {c: i for i, c in enumerate(self.classes_)}
+        idx = np.array([class_to_index[val] for val in y], dtype=int)
+        y_onehot[np.arange(n), idx] = 1.0
+        return y_onehot
+    
+    def _output_activation(self, Z_out):
+        if self.n_outputs_ == 1:
+            Z = np.clip(Z_out, -500, 500)
+            return 1.0 / (1.0 + np.exp(-Z))
+
+        Z = Z_out - np.max(Z_out, axis=1, keepdims=True)
+        expZ = np.exp(Z)
+        return expZ / np.sum(expZ, axis=1, keepdims=True)
+    
+    def _loss_and_grad(self, A_out, y_true):
+        eps = 1e-12
+
+        if self.n_outputs_ == 1:
+            A = np.clip(A_out, eps, 1.0 - eps)
+            loss = -np.mean(y_true * np.log(A) + (1.0 - y_true) * np.log(1.0 - A))
+
+            dZ_out = (A_out - y_true)
+            return loss, dZ_out
+
+        A = np.clip(A_out, eps, 1.0 - eps)
+        loss = -np.mean(np.sum(y_true * np.log(A), axis=1))
+
+        dZ_out = (A_out - y_true)
+        return loss, dZ_out
+    
+    def _predict_from_output(self, A_out):
+        if self.n_outputs_ == 1:
+            y01 = (A_out.ravel() >= self.threshold).astype(int)
+            return self.classes_[y01]
+
+        idx = np.argmax(A_out, axis=1)
+        return self.classes_[idx]
+
+    def predict_proba(self, X):
+        X = check_X(X, dtype=float)  
+        A_out, _ = self._forward(X)
+
+        if self.n_outputs_ == 1:
+            p1 = A_out.ravel()
+            p0 = 1.0 - p1
+            return np.column_stack([p0, p1])
+
         return A_out
