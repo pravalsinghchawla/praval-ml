@@ -30,8 +30,8 @@ class MLPBase(BaseEstimator, ABC):
         self.loss_history_ = []
         self.n_features_in_ = None
         self.n_outputs_ = None
-        self.weights_ = None   # list of arrays
-        self.biases_ = None    # list of arrays (if fit_intercept)
+        self.weights_ = None  
+        self.biases_ = None    
 
     def fit(self, X, y):
         X, y = check_X_y(X, y, X_dtype=float, y_dtype=float)
@@ -210,3 +210,18 @@ class MLPBase(BaseEstimator, ABC):
     def _predict_from_output(self, A_out):
         pass
 
+
+class MLPRegressor(MLPBase, RegressorMixin):
+    def _output_activation(self, Z_out):
+        return Z_out
+    
+    def _loss_and_grad(self, A_out, y_true):
+        diff = A_out - y_true
+        loss = 0.5 * np.mean(diff ** 2)
+        dZ_out = diff
+        return loss, dZ_out
+    
+    def _predict_from_output(self, A_out):
+        if A_out.shape[1] == 1:
+            return A_out.ravel()
+        return A_out
