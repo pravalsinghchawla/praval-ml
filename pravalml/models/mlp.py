@@ -13,6 +13,7 @@ class MLPBase(BaseEstimator, ABC):
             epochs: int = 200,
             batch_size = None,
             l2: float = 0.0,
+            leaky_relu_alpha: float = 0.01,
             fit_intercept: bool = True,
             random_state = None,
             shuffle = True
@@ -25,6 +26,7 @@ class MLPBase(BaseEstimator, ABC):
         self.epochs = epochs
         self.batch_size = batch_size
         self.l2 = l2
+        self.leaky_relu_alpha = leaky_relu_alpha
         self.fit_intercept = fit_intercept
         self.random_state = random_state
         self.shuffle = shuffle
@@ -166,7 +168,7 @@ class MLPBase(BaseEstimator, ABC):
                 self.biases_.append(np.zeros((1, fan_out), dtype=float))
 
     def _init_weight_matrix(self, rng, fan_in, fan_out):
-        if self.activation == "relu":
+        if self.activation in ("relu", "leaky_relu"):
             scale = np.sqrt(2.0 / fan_in)
         else:
             scale = np.sqrt(1.0 / fan_in)
@@ -175,6 +177,8 @@ class MLPBase(BaseEstimator, ABC):
     def _hidden_activation(self, Z):
         if self.activation == "relu":
             return np.maximum(0.0, Z)
+        if self.activation == "leaky_relu":
+            return np.where(Z > 0.0, Z, self.leaky_relu_alpha * Z)
         if self.activation == "tanh":
             return np.tanh(Z)
         if self.activation == "sigmoid":
@@ -185,6 +189,10 @@ class MLPBase(BaseEstimator, ABC):
     def _hidden_activation_grad(self, Z):
         if self.activation == "relu":
             return (Z > 0.0).astype(float)
+        if self.activation == "leaky_relu":
+            grad = np.ones_like(Z)
+            grad[Z < 0.0] = self.leaky_relu_alpha
+        return grad
         if self.activation == "tanh":
             A = np.tanh(Z)
             return 1.0 - A * A
@@ -238,6 +246,7 @@ class MLPClassifier(MLPBase, ClassifierMixin):
             epochs: int = 200, 
             batch_size=None, 
             l2: float = 0.0, 
+            leaky_relu_alpha: float = 0.01,
             fit_intercept: bool = True, 
             random_state=None, 
             shuffle=True,
@@ -250,6 +259,7 @@ class MLPClassifier(MLPBase, ClassifierMixin):
             epochs=epochs,
             batch_size=batch_size,
             l2=l2,
+            leaky_relu_alpha=leaky_relu_alpha,
             fit_intercept=fit_intercept,
             random_state=random_state,
             shuffle=shuffle,
